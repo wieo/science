@@ -1,0 +1,111 @@
+Data Clustering algorithms 
+Algorithms 
+
+Comparison of dimension reduction algorithms:
+  * {Isomap}  
+  * {Multidimensional scaling} (MDS) 
+  * {Spectral clustering}  
+  * {t-distributed stochastic neighbor embedding} (t-SNE) 
+Technologia {�} 
+
+Python & {Jupyter} environment
+
+Python libraries (besides standard):
+  * {numpy}  
+  * {pandas}  
+  * {sklearn}  
+  * {plotly}  
+The Code {�} 
+Libraries loading
+In [1]:
+import numpy as np
+import pandas as pd
+
+from sklearn import manifold
+
+import plotly.offline as py
+import plotly.graph_objs as go
+
+from time import time
+The function of input data
+In [2]:
+def read_arianta_csv(csv_path):
+    
+    df = pd.read_csv(
+        csv_path,
+        index_col=0,
+        header=0,
+        delimiter=';',
+        decimal=','
+    )
+    
+    categories = [s.strip() for s in df.columns.tolist()]
+    titles = [s.strip() for s in df.index.tolist()]
+    data = df.as_matrix()
+    
+    return data, categories, titles
+The function of drawing 2D scatter plot
+In [3]:
+def scatterplot(data, labels, title):
+    
+    trace = go.Scatter(
+        x = data[:,0],
+        y = data[:,1],
+        mode = 'markers',
+        text = labels
+    )
+
+    layout = go.Layout(
+        title = title,
+        hovermode= 'closest'
+    )
+    
+    return go.Figure(data=[trace], layout=layout)
+For isomap i spectral embedding vertexes neighbour number equals 10
+
+Default parameters for library sklearn.manifold.
+In [4]:
+methods = {
+    'Isomap': manifold.Isomap(n_neighbors=10, n_components=2),
+    'MDS': manifold.MDS(n_components=2),
+    'Spectral Clustering': manifold.SpectralEmbedding(n_components=2, n_neighbors=10),
+    't-SNE': manifold.TSNE(n_components=2)
+}
+The function performs data tasks
+In [5]:
+def handle(map_for, weights_type, X, labels):
+    
+    for method_name, method in methods.items():
+    
+        t1 = time()
+
+        Y = method.fit_transform(X)
+
+        t2 = time()
+        dt = round(t2 - t1, 2)
+
+        title = f'{map_for}, {weights_type}, {method_name}, {dt:.2f}s'
+        filename = f'arianta-{map_for}-{weights_type}-{method_name}'.replace(' ', '-').lower()
+        
+        df = pd.DataFrame(data=Y, index=labels, columns=['x', 'y'])
+        
+        df.to_csv(f'{filename}.csv', encoding='utf-8')
+        
+        fig = scatterplot(Y, labels, title)
+        
+        py.plot(fig, filename=f"{filename}.html")
+Loading unweighted data matrix
+In [6]:
+X, category_labels, title_labels = read_arianta_csv('arianta_matrix.csv')
+Performing the set of algorithms
+In [7]:
+handle('publikacje', 'nieważone', X, title_labels)
+handle('kategorie', 'nieważone', X.transpose(), category_labels)
+Loading weighted data matrix
+In [8]:
+X, category_labels, title_labels = read_arianta_csv('arianta_matrix_weight.csv')
+Performing the set of algorithms
+In [9]:
+handle('publikacje', 'ważone', X, title_labels)
+handle('kategorie', 'ważone', X.transpose(), category_labels)
+aut. mgr inż. Jan Wojtecki 
