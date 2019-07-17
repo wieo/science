@@ -1,0 +1,83 @@
+import numpy as np
+import pandas as pd
+from sklearn import manifold
+
+import plotly.offline as py
+import plotly.graph_objs as go
+from time import time
+
+
+def read_arianta_csv(csv_path):
+    
+    df = pd.read_csv(
+        csv_path,
+        index_col=0,
+        header=0,
+        delimiter=';',
+        decimal=','
+    )
+    
+    categories = [s.strip() for s in df.columns.tolist()]
+    titles = [s.strip() for s in df.index.tolist()]
+    data = df.as_matrix()
+    return data, categories, titles
+
+def scatterplot(data, labels, title):
+    
+    trace = go.Scatter(
+        x = data[:,0],
+        y = data[:,1],
+        mode = 'markers',
+        text = labels
+    )
+
+    layout = go.Layout(
+        title = title,
+        hovermode= 'closest'
+    )
+    
+    return go.Figure(data=[trace], layout=layout)
+
+methods = {
+    'Isomap': manifold.Isomap(n_neighbors=10, n_components=2),
+    'MDS': manifold.MDS(n_components=2),
+    'Spectral Clustering': manifold.SpectralEmbedding(n_components=2, n_neighbors=10),
+    't-SNE': manifold.TSNE(n_components=2)
+}
+
+
+def handle(map_for, weights_type, X, labels):
+    
+    for method_name, method in methods.items():
+    
+        t1 = time()
+
+        Y = method.fit_transform(X)
+
+        t2 = time()
+        dt = round(t2 - t1, 2)
+
+        title = f'{map_for}, {weights_type}, {method_name}, {dt:.2f}s'
+        filename = f'arianta-{map_for}-{weights_type}-{method_name}'.replace(' ', '-').lower()
+        
+        df = pd.DataFrame(data=Y, index=labels, columns=['x', 'y'])
+        
+        df.to_csv(f'{filename}.csv', encoding='utf-8')
+        
+        fig = scatterplot(Y, labels, title)
+        
+        py.plot(fig, filename=f"{filename}.html")
+
+
+X, category_labels, title_labels = read_arianta_csv('arianta_matrix.csv')
+
+
+handle('publikacje', 'niewaĹĽone', X, title_labels)
+handle('kategorie', 'niewaĹĽone', X.transpose(), category_labels)
+
+
+X, category_labels, title_labels = read_arianta_csv('arianta_matrix_weight.csv')
+
+
+handle('publikacje', 'waĹĽone', X, title_labels)
+handle('kategorie', 'waĹĽone', X.transpose(), category_labels)
